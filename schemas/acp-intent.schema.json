@@ -1,7 +1,8 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/acp/intent.schema.json",
   "title": "ACP Intent",
-  "description": "LLM agent intent to perform commerce actions",
+  "description": "LLM agent intent to perform commerce actions - aligned with official ACP specification",
   "type": "object",
   "required": ["type", "actor", "payload"],
   "properties": {
@@ -14,81 +15,94 @@
       "const": "llm"
     },
     "payload": {
-      "$ref": "#/definitions/IntentPayload"
+      "$ref": "#/$defs/IntentPayload"
     }
   },
-  "definitions": {
+  "$defs": {
     "IntentPayload": {
       "type": "object",
       "required": ["action"],
       "properties": {
         "action": {
           "type": "string",
-          "enum": ["add_to_cart", "select_variant", "set_quantity", "checkout"]
+          "enum": ["add_to_cart", "select_variant", "set_quantity", "checkout"],
+          "description": "The action to perform"
         },
         "items": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/CartItem"
+            "$ref": "#/$defs/Item"
           },
-          "default": []
+          "default": [],
+          "description": "Items to act upon"
         },
         "notes": {
           "type": "string",
           "description": "Optional notes from the LLM about user preferences or context"
         },
         "context": {
-          "type": "object",
-          "description": "Additional context like session_id, locale, etc.",
-          "properties": {
-            "session_id": {
-              "type": "string"
-            },
-            "locale": {
-              "type": "string"
-            },
-            "user_id": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": true
+          "$ref": "#/$defs/IntentContext"
         }
       }
     },
-    "CartItem": {
+    "Item": {
       "type": "object",
-      "required": ["product_id"],
+      "additionalProperties": false,
+      "required": ["id", "quantity"],
       "properties": {
-        "product_id": {
+        "id": {
           "type": "string",
-          "description": "Unique identifier for the product"
+          "description": "Unique identifier for the product/item"
         },
         "variant_id": {
           "type": "string",
-          "description": "Optional variant identifier (size, color, etc.)"
+          "description": "Optional variant identifier (size, color, etc.) - ACP extension"
         },
         "quantity": {
           "type": "integer",
           "minimum": 1,
-          "default": 1
+          "description": "Quantity of the item"
         },
         "price": {
-          "$ref": "#/definitions/Money"
+          "$ref": "#/$defs/Money",
+          "description": "Optional price override - ACP extension"
         }
       }
     },
     "Money": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["value", "currency"],
       "properties": {
         "value": {
           "type": "number",
-          "minimum": 0
+          "minimum": 0,
+          "description": "Monetary value"
         },
         "currency": {
           "type": "string",
           "pattern": "^[A-Z]{3}$",
-          "default": "USD"
+          "default": "USD",
+          "description": "Three-letter currency code (ISO 4217)"
+        }
+      }
+    },
+    "IntentContext": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Additional context like session_id, locale, etc.",
+      "properties": {
+        "session_id": {
+          "type": "string",
+          "description": "Session identifier"
+        },
+        "locale": {
+          "type": "string",
+          "description": "Locale identifier (e.g., en-US)"
+        },
+        "user_id": {
+          "type": "string",
+          "description": "User identifier"
         }
       }
     }

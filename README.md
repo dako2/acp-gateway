@@ -120,6 +120,7 @@ acp-gateway/
 │   ├── test-fastapi.py
 │   ├── test-express.js
 │   └── package.json
+├── review-acp-alignment.py  # Schema validation tool
 ├── API.md            # Detailed API documentation
 └── run-tests.sh      # Automated test runner
 ```
@@ -187,6 +188,12 @@ node examples/test-express.js
 
 # Test both (if servers are running)
 ./run-tests.sh
+```
+
+### Schema Validation
+```bash
+# Check schema alignment with official ACP specification
+python review-acp-alignment.py
 ```
 
 ### Code Structure

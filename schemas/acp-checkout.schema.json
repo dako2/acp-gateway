@@ -1,7 +1,8 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/acp/checkout.schema.json",
   "title": "ACP Checkout Request",
-  "description": "Request to create a checkout session",
+  "description": "Request to create a checkout session - aligned with official ACP specification",
   "type": "object",
   "required": ["cart_id"],
   "properties": {
@@ -9,20 +10,19 @@
       "type": "string",
       "description": "ID of the cart to checkout"
     },
-    "email": {
-      "type": "string",
-      "format": "email",
-      "description": "Customer email address"
+    "buyer": {
+      "$ref": "#/$defs/Buyer",
+      "description": "Buyer information"
     },
     "shipping_address": {
-      "$ref": "#/definitions/Address"
+      "$ref": "#/$defs/Address"
     },
     "billing_address": {
-      "$ref": "#/definitions/Address",
+      "$ref": "#/$defs/Address",
       "description": "Billing address (defaults to shipping_address if not provided)"
     },
     "payment": {
-      "$ref": "#/definitions/Payment"
+      "$ref": "#/$defs/Payment"
     },
     "metadata": {
       "type": "object",
@@ -30,51 +30,76 @@
       "additionalProperties": true
     }
   },
-  "definitions": {
+  "$defs": {
     "Address": {
       "type": "object",
-      "required": ["country"],
+      "additionalProperties": false,
+      "required": ["name", "line_one", "city", "state", "country", "postal_code"],
       "properties": {
-        "first_name": {
-          "type": "string"
+        "name": {
+          "type": "string",
+          "description": "Full name of the recipient"
         },
-        "last_name": {
-          "type": "string"
+        "line_one": {
+          "type": "string",
+          "description": "Primary address line (street address)"
         },
-        "company": {
-          "type": "string"
-        },
-        "address1": {
-          "type": "string"
-        },
-        "address2": {
-          "type": "string"
+        "line_two": {
+          "type": "string",
+          "description": "Secondary address line (apartment, suite, etc.)"
         },
         "city": {
-          "type": "string"
+          "type": "string",
+          "description": "City name"
         },
         "state": {
-          "type": "string"
-        },
-        "postal_code": {
-          "type": "string"
+          "type": "string",
+          "description": "State or province"
         },
         "country": {
           "type": "string",
-          "pattern": "^[A-Z]{2}$"
+          "pattern": "^[A-Z]{2}$",
+          "description": "Two-letter country code (ISO 3166-1 alpha-2)"
         },
-        "phone": {
-          "type": "string"
+        "postal_code": {
+          "type": "string",
+          "description": "Postal or ZIP code"
+        }
+      }
+    },
+    "Buyer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["first_name", "last_name", "email"],
+      "properties": {
+        "first_name": {
+          "type": "string",
+          "description": "Buyer's first name"
+        },
+        "last_name": {
+          "type": "string",
+          "description": "Buyer's last name"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Buyer's email address"
+        },
+        "phone_number": {
+          "type": "string",
+          "description": "Buyer's phone number"
         }
       }
     },
     "Payment": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["method"],
       "properties": {
         "method": {
           "type": "string",
-          "enum": ["card", "paypal", "apple_pay", "google_pay", "bank_transfer"]
+          "enum": ["card", "paypal", "apple_pay", "google_pay", "bank_transfer"],
+          "description": "Payment method"
         },
         "token": {
           "type": "string",
@@ -82,21 +107,26 @@
         },
         "card": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "number": {
-              "type": "string"
+              "type": "string",
+              "description": "Card number"
             },
             "exp_month": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 12
+              "maximum": 12,
+              "description": "Expiration month"
             },
             "exp_year": {
               "type": "integer",
-              "minimum": 2024
+              "minimum": 2024,
+              "description": "Expiration year"
             },
             "cvc": {
-              "type": "string"
+              "type": "string",
+              "description": "Card verification code"
             }
           }
         }

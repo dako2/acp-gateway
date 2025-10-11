@@ -1,7 +1,8 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/acp/intent-result.schema.json",
   "title": "ACP Intent Result",
-  "description": "Gateway response to an LLM intent",
+  "description": "Gateway response to an LLM intent - aligned with official ACP specification",
   "type": "object",
   "required": ["type", "ok", "sandbox"],
   "properties": {
@@ -18,19 +19,20 @@
       "description": "Whether this was processed in sandbox mode"
     },
     "cart": {
-      "$ref": "#/definitions/Cart"
+      "$ref": "#/$defs/Cart"
     },
     "next": {
-      "$ref": "#/definitions/NextAction"
+      "$ref": "#/$defs/NextAction"
     },
     "error": {
       "type": "string",
       "description": "Error message if ok is false"
     }
   },
-  "definitions": {
+  "$defs": {
     "Cart": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["id", "items", "subtotal"],
       "properties": {
         "id": {
@@ -40,79 +42,94 @@
         "items": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/CartItemWithPrice"
-          }
+            "$ref": "#/$defs/CartItem"
+          },
+          "description": "Items in the cart"
         },
         "subtotal": {
-          "$ref": "#/definitions/Money"
+          "$ref": "#/$defs/Money",
+          "description": "Subtotal amount"
         },
         "total": {
-          "$ref": "#/definitions/Money",
+          "$ref": "#/$defs/Money",
           "description": "Final total including taxes and shipping"
         },
         "taxes": {
-          "$ref": "#/definitions/Money",
+          "$ref": "#/$defs/Money",
           "description": "Tax amount"
         },
         "shipping": {
-          "$ref": "#/definitions/Money",
+          "$ref": "#/$defs/Money",
           "description": "Shipping cost"
         }
       }
     },
-    "CartItemWithPrice": {
+    "CartItem": {
       "type": "object",
-      "required": ["product_id", "quantity", "price"],
+      "additionalProperties": false,
+      "required": ["id", "quantity", "price"],
       "properties": {
-        "product_id": {
-          "type": "string"
+        "id": {
+          "type": "string",
+          "description": "Product/item identifier"
         },
         "variant_id": {
-          "type": "string"
+          "type": "string",
+          "description": "Variant identifier - ACP extension"
         },
         "quantity": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Quantity of the item"
         },
         "price": {
-          "$ref": "#/definitions/Money"
+          "$ref": "#/$defs/Money",
+          "description": "Price of the item"
         }
       }
     },
     "NextAction": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["action", "endpoint"],
       "properties": {
         "action": {
           "type": "string",
-          "enum": ["checkout", "payment", "confirmation"]
+          "enum": ["checkout", "payment", "confirmation"],
+          "description": "Next action to perform"
         },
         "endpoint": {
           "type": "string",
-          "format": "uri"
+          "format": "uri",
+          "description": "Endpoint URL for the next action"
         },
         "method": {
           "type": "string",
           "enum": ["GET", "POST", "PUT", "DELETE"],
-          "default": "POST"
+          "default": "POST",
+          "description": "HTTP method for the next action"
         },
         "params": {
           "type": "object",
-          "description": "Additional parameters for the next action"
+          "description": "Additional parameters for the next action",
+          "additionalProperties": true
         }
       }
     },
     "Money": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["value", "currency"],
       "properties": {
         "value": {
           "type": "number",
-          "minimum": 0
+          "minimum": 0,
+          "description": "Monetary value"
         },
         "currency": {
           "type": "string",
-          "pattern": "^[A-Z]{3}$"
+          "pattern": "^[A-Z]{3}$",
+          "description": "Three-letter currency code (ISO 4217)"
         }
       }
     }

@@ -1,7 +1,8 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/acp/checkout-response.schema.json",
   "title": "ACP Checkout Response",
-  "description": "Gateway response to checkout request",
+  "description": "Gateway response to checkout request - aligned with official ACP specification",
   "type": "object",
   "required": ["ok", "sandbox"],
   "properties": {
@@ -36,7 +37,7 @@
       "description": "Client secret for frontend payment confirmation"
     },
     "total": {
-      "$ref": "#/definitions/Money",
+      "$ref": "#/$defs/Money",
       "description": "Total amount for the order"
     },
     "error": {
@@ -44,18 +45,21 @@
       "description": "Error message if ok is false"
     }
   },
-  "definitions": {
+  "$defs": {
     "Money": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["value", "currency"],
       "properties": {
         "value": {
           "type": "number",
-          "minimum": 0
+          "minimum": 0,
+          "description": "Monetary value"
         },
         "currency": {
           "type": "string",
-          "pattern": "^[A-Z]{3}$"
+          "pattern": "^[A-Z]{3}$",
+          "description": "Three-letter currency code (ISO 4217)"
         }
       }
     }

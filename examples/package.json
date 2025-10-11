@@ -8,10 +8,14 @@
     "test-express": "node test-express.js"
   },
   "dependencies": {
-    "axios": "^1.6.0"
+    "axios": "^1.12.2"
   },
-  "devDependencies": {},
-  "keywords": ["acp", "gateway", "test", "examples"],
+  "keywords": [
+    "acp",
+    "gateway",
+    "test",
+    "examples"
+  ],
   "author": "",
   "license": "MIT"
 }

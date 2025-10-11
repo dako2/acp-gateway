@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Header, HTTPException, Request, Query, UploadFile, File
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 import os, hmac, hashlib, time
 
 # ------------------ Config ------------------
@@ -58,8 +58,8 @@ class IntentPayload(BaseModel):
     context: Optional[Dict[str, Any]] = None
 
 class Intent(BaseModel):
-    type: str = Field("acp.intent", const=True)
-    actor: str = Field("llm", const=True)
+    type: Literal["acp.intent"] = "acp.intent"
+    actor: Literal["llm"] = "llm"
     payload: IntentPayload
 
 class CheckoutReq(BaseModel):
