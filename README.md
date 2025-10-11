@@ -2,7 +2,12 @@
 
 A compact gateway that exposes Agentic Commerce Protocol (ACP) endpoints for LLM agents and merchant systems.
 
-About ACP: https://github.com/agentic-commerce-protocol
+About ACP: 
+
+https://github.com/agentic-commerce-protocol
+
+https://stripe.com/blog/developing-an-open-standard-for-agentic-commerce
+
 
 ## Features
 
