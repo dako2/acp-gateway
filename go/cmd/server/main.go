@@ -31,6 +31,10 @@ func main() {
 	// Health check endpoint (no auth required)
 	r.HandleFunc("/healthz", handlers.HealthHandler).Methods("GET")
 	
+	// API documentation endpoints (no auth required)
+	r.HandleFunc("/docs", handlers.DocsHandler).Methods("GET")
+	r.HandleFunc("/openapi.json", handlers.OpenAPIHandler).Methods("GET")
+	
 	// ACP endpoints (require API key)
 	acp := r.PathPrefix("/acp/v1").Subrouter()
 	acp.HandleFunc("/products", middleware.RequireAPIKey(handlers.ProductsHandler)).Methods("GET")

@@ -75,12 +75,32 @@ export PATH="/usr/local/go/bin:$PATH"
 | Method | Path | Purpose |
 |--------|------|---------|
 | `GET` | `/healthz` | Health check |
+| `GET` | `/docs` | API documentation (HTML) |
+| `GET` | `/openapi.json` | OpenAPI specification |
+| `GET` | `/redoc` | ReDoc documentation (FastAPI only) |
 | `GET` | `/acp/v1/products` | List/search products |
 | `POST` | `/acp/v1/intent` | Handle LLM intents (add to cart, etc.) |
 | `POST` | `/acp/v1/checkout` | Create checkout session |
 | `POST` | `/merchant/register` | Register new merchant |
 | `POST` | `/merchant/feed` | Upload product feed |
 | `POST` | `/webhooks/acp` | Receive webhooks |
+
+## API Documentation
+
+Each implementation provides interactive API documentation:
+
+### FastAPI (Python)
+- **Swagger UI**: http://localhost:8080/docs
+- **ReDoc**: http://localhost:8080/redoc
+- **OpenAPI JSON**: http://localhost:8080/openapi.json
+
+### Express (TypeScript)
+- **HTML Docs**: http://localhost:8081/docs
+- **OpenAPI JSON**: http://localhost:8081/openapi.json
+
+### Go
+- **HTML Docs**: http://localhost:8082/docs
+- **OpenAPI JSON**: http://localhost:8082/openapi.json
 
 ## Authentication
 

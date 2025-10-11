@@ -90,6 +90,141 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(models.HealthResponse{OK: true})
 }
 
+// DocsHandler serves API documentation
+func DocsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	docsHTML := `<!DOCTYPE html>
+<html>
+<head>
+    <title>ACP Gateway API Documentation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .endpoint { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .method { font-weight: bold; color: #007acc; }
+        .path { font-family: monospace; background: #e8e8e8; padding: 2px 5px; }
+    </style>
+</head>
+<body>
+    <h1>ACP Gateway API Documentation</h1>
+    <p>Agentic Commerce Protocol (ACP) Gateway - Reference Implementation</p>
+    
+    <h2>Endpoints</h2>
+    
+    <div class="endpoint">
+        <span class="method">GET</span> <span class="path">/healthz</span>
+        <p>Health check endpoint</p>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">GET</span> <span class="path">/acp/v1/products</span>
+        <p>List products with optional search and pagination</p>
+        <p><strong>Headers:</strong> Authorization: Bearer &lt;API_KEY&gt;</p>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">POST</span> <span class="path">/acp/v1/intent</span>
+        <p>Process intent requests from LLM agents</p>
+        <p><strong>Headers:</strong> Authorization: Bearer &lt;API_KEY&gt;</p>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">POST</span> <span class="path">/acp/v1/checkout</span>
+        <p>Process checkout requests</p>
+        <p><strong>Headers:</strong> Authorization: Bearer &lt;API_KEY&gt;</p>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">POST</span> <span class="path">/merchant/register</span>
+        <p>Register new merchants</p>
+        <p><strong>Headers:</strong> Authorization: Bearer &lt;API_KEY&gt;</p>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">POST</span> <span class="path">/merchant/feed</span>
+        <p>Upload product feeds</p>
+        <p><strong>Headers:</strong> Authorization: Bearer &lt;API_KEY&gt;</p>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">POST</span> <span class="path">/webhooks/acp</span>
+        <p>Receive webhook notifications</p>
+        <p><strong>Headers:</strong> X-Acp-Signature: t=&lt;ts&gt;,v1=&lt;hex&gt;</p>
+    </div>
+    
+    <h2>Authentication</h2>
+    <p>Most endpoints require API key authentication via the Authorization header:</p>
+    <code>Authorization: Bearer your_api_key</code>
+    
+    <h2>More Information</h2>
+    <p>For detailed API documentation, see <a href="/openapi.json">OpenAPI Specification</a></p>
+    <p>For implementation details, see the <a href="https://github.com/agentic-commerce-protocol">ACP Protocol</a> repository.</p>
+</body>
+</html>`
+	fmt.Fprint(w, docsHTML)
+}
+
+// OpenAPIHandler serves OpenAPI specification
+func OpenAPIHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	openapiSpec := map[string]interface{}{
+		"openapi": "3.0.0",
+		"info": map[string]interface{}{
+			"title":       "ACP Gateway",
+			"version":     "0.1.0",
+			"description": "Agentic Commerce Protocol (ACP) Gateway - Reference Implementation",
+		},
+		"servers": []map[string]interface{}{
+			{"url": "http://localhost:8082", "description": "Go implementation"},
+		},
+		"paths": map[string]interface{}{
+			"/healthz": map[string]interface{}{
+				"get": map[string]interface{}{
+					"summary":     "Health check",
+					"description": "Returns the health status of the gateway",
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{
+							"description": "OK",
+							"content": map[string]interface{}{
+								"application/json": map[string]interface{}{
+									"schema": map[string]interface{}{
+										"type": "object",
+										"properties": map[string]interface{}{
+											"ok": map[string]interface{}{
+												"type": "boolean",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"/acp/v1/products": map[string]interface{}{
+				"get": map[string]interface{}{
+					"summary":     "List products",
+					"description": "Retrieve a list of available products",
+					"security":    []map[string]interface{}{{"ApiKeyAuth": {}}},
+					"parameters": []map[string]interface{}{
+						{"name": "q", "in": "query", "schema": map[string]interface{}{"type": "string"}},
+						{"name": "limit", "in": "query", "schema": map[string]interface{}{"type": "integer", "default": 20}},
+						{"name": "offset", "in": "query", "schema": map[string]interface{}{"type": "integer", "default": 0}},
+					},
+				},
+			},
+		},
+		"components": map[string]interface{}{
+			"securitySchemes": map[string]interface{}{
+				"ApiKeyAuth": map[string]interface{}{
+					"type": "http",
+					"scheme": "bearer",
+				},
+			},
+		},
+	}
+	json.NewEncoder(w).Encode(openapiSpec)
+}
+
 // ProductsHandler handles product listing and search
 func ProductsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")

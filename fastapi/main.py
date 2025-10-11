@@ -8,7 +8,14 @@ API_KEYS = set([k.strip() for k in os.getenv("ACP_API_KEYS", "").split(",") if k
 WEBHOOK_SECRET = os.getenv("ACP_WEBHOOK_SECRET", "whsec_123")
 
 # ------------------ App ------------------
-app = FastAPI(title="ACP Gateway", version="0.1.0")
+app = FastAPI(
+    title="ACP Gateway",
+    version="0.1.0",
+    description="Agentic Commerce Protocol (ACP) Gateway - Reference Implementation",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
+)
 
 # ------------------ Storage (in-mem demo) ------------------
 DB: Dict[str, Any] = {
