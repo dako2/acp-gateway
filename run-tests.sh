@@ -35,7 +35,7 @@ fi
 # Test Express
 echo ""
 echo "Testing Express Implementation..."
-if check_server 8080 "Express"; then
+if check_server 8081 "Express"; then
     cd examples
     if [ ! -f "node_modules/axios/package.json" ]; then
         echo "Installing axios..."
@@ -45,7 +45,19 @@ if check_server 8080 "Express"; then
     echo "✓ Express tests completed"
 else
     echo "⚠ Skipping Express tests - server not running"
-    echo "  To start: cd express && npm run dev"
+    echo "  To start: cd express && PORT=8081 npm run dev"
+fi
+
+# Test Go
+echo ""
+echo "Testing Go Implementation..."
+if check_server 8082 "Go"; then
+    cd go
+    make test-api
+    echo "✓ Go tests completed"
+else
+    echo "⚠ Skipping Go tests - server not running"
+    echo "  To start: cd go && make run"
 fi
 
 echo ""

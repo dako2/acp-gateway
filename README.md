@@ -12,6 +12,7 @@ About ACP: https://github.com/agentic-commerce-protocol
 - 📊 **Audit logs** for all operations
 - 🔐 **API key auth** + HMAC webhook verification
 - 💾 **In-memory storage** (easily swappable for Redis/DB)
+- 🚀 **3 Language Implementations**: Python (FastAPI), TypeScript (Express), Go (High Performance)
 
 ## Quick Start
 
@@ -36,7 +37,29 @@ export ACP_WEBHOOK_SECRET="whsec_123"
 npm run dev
 ```
 
-### Test Both Implementations
+### Go (High Performance)
+
+```bash
+cd go
+# Fix PATH if Go is not found (common on macOS)
+export PATH="/usr/local/go/bin:$PATH"
+
+# Install dependencies and build
+make deps
+
+# Set environment variables and run
+export ACP_API_KEYS="test_key_123,another_key"
+export ACP_WEBHOOK_SECRET="whsec_123"
+export PORT=8082
+make run
+```
+
+**Note**: If you get "command not found: go", add this to your shell profile (`~/.zshrc` or `~/.bashrc`):
+```bash
+export PATH="/usr/local/go/bin:$PATH"
+```
+
+### Test All Implementations
 
 ```bash
 ./run-tests.sh
@@ -64,8 +87,17 @@ npm run dev
 
 ### List Products
 ```bash
+# FastAPI (port 8080)
 curl -H "Authorization: Bearer test_key_123" \
      http://localhost:8080/acp/v1/products
+
+# Express (port 8081) 
+curl -H "Authorization: Bearer test_key_123" \
+     http://localhost:8081/acp/v1/products
+
+# Go (port 8082)
+curl -H "Authorization: Bearer test_key_123" \
+     http://localhost:8082/acp/v1/products
 ```
 
 ### Add to Cart
@@ -78,7 +110,7 @@ curl -X POST \
        "actor": "llm",
        "payload": {
          "action": "add_to_cart",
-         "items": [{"product_id": "sku_123", "quantity": 2}],
+         "items": [{"id": "sku_123", "quantity": 2}],
          "context": {"session_id": "session_123"}
        }
      }' \
@@ -91,8 +123,12 @@ curl -X POST \
      -H "Authorization: Bearer test_key_123" \
      -H "Content-Type: application/json" \
      -d '{
-       "cart_id": "cart_123",
-       "email": "buyer@example.com",
+       "cart_id": "session_123",
+       "buyer": {
+         "first_name": "John",
+         "last_name": "Doe", 
+         "email": "buyer@example.com"
+       },
        "payment": {"method": "card", "token": "tok_123"}
      }' \
      http://localhost:8080/acp/v1/checkout
@@ -102,7 +138,7 @@ curl -X POST \
 
 ```
 acp-gateway/
-├── fastapi/           # FastAPI implementation
+├── fastapi/           # FastAPI implementation (Python)
 │   ├── main.py
 │   ├── requirements.txt
 │   └── env.example
@@ -110,6 +146,13 @@ acp-gateway/
 │   ├── src/index.ts
 │   ├── package.json
 │   ├── tsconfig.json
+│   └── env.example
+├── go/               # Go implementation (High Performance)
+│   ├── cmd/server/
+│   ├── internal/
+│   ├── test/
+│   ├── go.mod
+│   ├── Makefile
 │   └── env.example
 ├── schemas/           # JSON schemas for ACP protocol
 │   ├── acp-intent.schema.json
@@ -131,7 +174,7 @@ acp-gateway/
 |----------|-------------|---------|
 | `ACP_API_KEYS` | Comma-separated API keys | `test_key_123,another_key` |
 | `ACP_WEBHOOK_SECRET` | Webhook HMAC secret | `whsec_123` |
-| `PORT` | Server port (Express only) | `8080` |
+| `PORT` | Server port | `8080` (FastAPI), `8081` (Express), `8082` (Go) |
 
 ## ACP Protocol Schemas
 
@@ -180,13 +223,18 @@ acp-gateway/
 
 ### Running Tests
 ```bash
-# Test FastAPI
+# Test FastAPI (port 8080)
 python examples/test-fastapi.py
 
-# Test Express
+# Test Express (port 8081)
 node examples/test-express.js
 
-# Test both (if servers are running)
+# Test Go (port 8082)
+cd go
+export PATH="/usr/local/go/bin:$PATH"  # Fix PATH if needed
+make test-api
+
+# Test all implementations (if servers are running)
 ./run-tests.sh
 ```
 
@@ -199,7 +247,24 @@ python review-acp-alignment.py
 ### Code Structure
 - **FastAPI**: Uses Pydantic models, FastAPI decorators, and async/await
 - **Express**: Uses TypeScript, Zod validation, and middleware patterns
-- **Both**: Share identical API contracts and behavior
+- **Go**: Uses structs, Gorilla Mux router, and strong typing
+- **All**: Share identical API contracts and behavior
+
+### Performance Comparison
+
+| Feature | FastAPI (Python) | Express (TypeScript) | Go |
+|---------|------------------|---------------------|----| 
+| **Performance** | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| **Memory Usage** | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ |
+| **Type Safety** | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ |
+| **Development Speed** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
+| **Deployment** | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| **Ecosystem** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
+
+**Recommendations:**
+- **Development/Prototyping**: FastAPI (Python)
+- **Full-stack JavaScript**: Express (TypeScript)  
+- **Production/High Load**: Go
 
 ## Production Considerations
 
@@ -218,11 +283,50 @@ python review-acp-alignment.py
 - Add structured logging and metrics
 - Set up health checks and error tracking
 
+## Troubleshooting
+
+### Go Setup Issues
+
+**"command not found: go"**
+```bash
+# Check if Go is installed
+ls -la /usr/local/go/bin/go
+
+# Add to PATH permanently
+echo 'export PATH="/usr/local/go/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+**"no such file or directory: go"**
+```bash
+# Install Go (macOS with Homebrew)
+brew install go
+
+# Or download from https://golang.org/dl/
+```
+
+**Build errors in Go**
+```bash
+# Clean and rebuild
+cd go
+make clean
+make deps
+make build
+```
+
+### Port Conflicts
+
+If you get "address already in use" errors:
+- **FastAPI**: Change port with `--port 8081` (instead of 8080)
+- **Express**: Set `PORT=8083` environment variable
+- **Go**: Set `PORT=8084` environment variable
+
 ## Documentation
 
 - **[API.md](./API.md)** - Complete API reference with examples
 - **[Schemas](./schemas/)** - JSON schemas for validation
 - **[Examples](./examples/)** - Test scripts and usage examples
+- **[Go Implementation](./go/README.md)** - Go-specific documentation
 
 ## License
 
