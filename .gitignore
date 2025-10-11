@@ -31,6 +31,7 @@ ENV/
 env.bak/
 venv.bak/
 
+examples/temp-acp-spec
 # Node.js
 node_modules/
 npm-debug.log*
