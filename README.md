@@ -2,6 +2,8 @@
 
 A compact gateway that exposes Agentic Commerce Protocol (ACP) endpoints for LLM agents and merchant systems.
 
+About ACP: https://github.com/agentic-commerce-protocol
+
 ## Features
 
 - 🧠 **LLM-facing ACP endpoints** (`/acp/v1/*`)
