@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ACP Intent",
+  "description": "LLM agent intent to perform commerce actions",
+  "type": "object",
+  "required": ["type", "actor", "payload"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "acp.intent"
+    },
+    "actor": {
+      "type": "string",
+      "const": "llm"
+    },
+    "payload": {
+      "$ref": "#/definitions/IntentPayload"
+    }
+  },
+  "definitions": {
+    "IntentPayload": {
+      "type": "object",
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["add_to_cart", "select_variant", "set_quantity", "checkout"]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CartItem"
+          },
+          "default": []
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes from the LLM about user preferences or context"
+        },
+        "context": {
+          "type": "object",
+          "description": "Additional context like session_id, locale, etc.",
+          "properties": {
+            "session_id": {
+              "type": "string"
+            },
+            "locale": {
+              "type": "string"
+            },
+            "user_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "CartItem": {
+      "type": "object",
+      "required": ["product_id"],
+      "properties": {
+        "product_id": {
+          "type": "string",
+          "description": "Unique identifier for the product"
+        },
+        "variant_id": {
+          "type": "string",
+          "description": "Optional variant identifier (size, color, etc.)"
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        },
+        "price": {
+          "$ref": "#/definitions/Money"
+        }
+      }
+    },
+    "Money": {
+      "type": "object",
+      "required": ["value", "currency"],
+      "properties": {
+        "value": {
+          "type": "number",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "default": "USD"
+        }
+      }
+    }
+  }
+}

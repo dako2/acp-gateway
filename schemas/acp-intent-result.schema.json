@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ACP Intent Result",
+  "description": "Gateway response to an LLM intent",
+  "type": "object",
+  "required": ["type", "ok", "sandbox"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "acp.intent.result"
+    },
+    "ok": {
+      "type": "boolean",
+      "description": "Whether the intent was processed successfully"
+    },
+    "sandbox": {
+      "type": "boolean",
+      "description": "Whether this was processed in sandbox mode"
+    },
+    "cart": {
+      "$ref": "#/definitions/Cart"
+    },
+    "next": {
+      "$ref": "#/definitions/NextAction"
+    },
+    "error": {
+      "type": "string",
+      "description": "Error message if ok is false"
+    }
+  },
+  "definitions": {
+    "Cart": {
+      "type": "object",
+      "required": ["id", "items", "subtotal"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique cart identifier"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CartItemWithPrice"
+          }
+        },
+        "subtotal": {
+          "$ref": "#/definitions/Money"
+        },
+        "total": {
+          "$ref": "#/definitions/Money",
+          "description": "Final total including taxes and shipping"
+        },
+        "taxes": {
+          "$ref": "#/definitions/Money",
+          "description": "Tax amount"
+        },
+        "shipping": {
+          "$ref": "#/definitions/Money",
+          "description": "Shipping cost"
+        }
+      }
+    },
+    "CartItemWithPrice": {
+      "type": "object",
+      "required": ["product_id", "quantity", "price"],
+      "properties": {
+        "product_id": {
+          "type": "string"
+        },
+        "variant_id": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "price": {
+          "$ref": "#/definitions/Money"
+        }
+      }
+    },
+    "NextAction": {
+      "type": "object",
+      "required": ["action", "endpoint"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["checkout", "payment", "confirmation"]
+        },
+        "endpoint": {
+          "type": "string",
+          "format": "uri"
+        },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "DELETE"],
+          "default": "POST"
+        },
+        "params": {
+          "type": "object",
+          "description": "Additional parameters for the next action"
+        }
+      }
+    },
+    "Money": {
+      "type": "object",
+      "required": ["value", "currency"],
+      "properties": {
+        "value": {
+          "type": "number",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        }
+      }
+    }
+  }
+}

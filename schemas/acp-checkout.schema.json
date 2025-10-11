@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ACP Checkout Request",
+  "description": "Request to create a checkout session",
+  "type": "object",
+  "required": ["cart_id"],
+  "properties": {
+    "cart_id": {
+      "type": "string",
+      "description": "ID of the cart to checkout"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Customer email address"
+    },
+    "shipping_address": {
+      "$ref": "#/definitions/Address"
+    },
+    "billing_address": {
+      "$ref": "#/definitions/Address",
+      "description": "Billing address (defaults to shipping_address if not provided)"
+    },
+    "payment": {
+      "$ref": "#/definitions/Payment"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata for the checkout",
+      "additionalProperties": true
+    }
+  },
+  "definitions": {
+    "Address": {
+      "type": "object",
+      "required": ["country"],
+      "properties": {
+        "first_name": {
+          "type": "string"
+        },
+        "last_name": {
+          "type": "string"
+        },
+        "company": {
+          "type": "string"
+        },
+        "address1": {
+          "type": "string"
+        },
+        "address2": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "postal_code": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$"
+        },
+        "phone": {
+          "type": "string"
+        }
+      }
+    },
+    "Payment": {
+      "type": "object",
+      "required": ["method"],
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["card", "paypal", "apple_pay", "google_pay", "bank_transfer"]
+        },
+        "token": {
+          "type": "string",
+          "description": "Payment token from payment processor"
+        },
+        "card": {
+          "type": "object",
+          "properties": {
+            "number": {
+              "type": "string"
+            },
+            "exp_month": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "exp_year": {
+              "type": "integer",
+              "minimum": 2024
+            },
+            "cvc": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

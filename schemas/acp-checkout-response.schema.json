@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ACP Checkout Response",
+  "description": "Gateway response to checkout request",
+  "type": "object",
+  "required": ["ok", "sandbox"],
+  "properties": {
+    "ok": {
+      "type": "boolean",
+      "description": "Whether the checkout was created successfully"
+    },
+    "sandbox": {
+      "type": "boolean",
+      "description": "Whether this was processed in sandbox mode"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Unique order identifier"
+    },
+    "checkout_id": {
+      "type": "string",
+      "description": "Checkout session identifier"
+    },
+    "payment_intent_status": {
+      "type": "string",
+      "enum": ["requires_action", "succeeded", "failed", "canceled"],
+      "description": "Status of the payment intent"
+    },
+    "redirect_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to redirect user for payment completion"
+    },
+    "client_secret": {
+      "type": "string",
+      "description": "Client secret for frontend payment confirmation"
+    },
+    "total": {
+      "$ref": "#/definitions/Money",
+      "description": "Total amount for the order"
+    },
+    "error": {
+      "type": "string",
+      "description": "Error message if ok is false"
+    }
+  },
+  "definitions": {
+    "Money": {
+      "type": "object",
+      "required": ["value", "currency"],
+      "properties": {
+        "value": {
+          "type": "number",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        }
+      }
+    }
+  }
+}

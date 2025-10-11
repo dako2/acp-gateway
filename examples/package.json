@@ -1,0 +1,17 @@
+{
+  "name": "acp-gateway-examples",
+  "version": "0.1.0",
+  "description": "Example scripts for testing ACP Gateway implementations",
+  "main": "test-express.js",
+  "scripts": {
+    "test-fastapi": "python test-fastapi.py",
+    "test-express": "node test-express.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {},
+  "keywords": ["acp", "gateway", "test", "examples"],
+  "author": "",
+  "license": "MIT"
+}
