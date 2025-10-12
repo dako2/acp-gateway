@@ -1,0 +1,505 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/openai/product-feed.schema.json",
+  "title": "OpenAI Product Feed Specification",
+  "description": "Complete product feed entry according to OpenAI Product Feed Specification for ChatGPT integration",
+  "type": "object",
+  "required": [
+    "openai_flags",
+    "basic_data", 
+    "item_info",
+    "media",
+    "price_promotions",
+    "availability_inventory",
+    "variants",
+    "fulfillment",
+    "merchant_info",
+    "returns"
+  ],
+  "properties": {
+    "openai_flags": {
+      "$ref": "#/$defs/OpenAIFlags"
+    },
+    "basic_data": {
+      "$ref": "#/$defs/BasicProductData"
+    },
+    "item_info": {
+      "$ref": "#/$defs/ItemInformation"
+    },
+    "media": {
+      "$ref": "#/$defs/Media"
+    },
+    "price_promotions": {
+      "$ref": "#/$defs/PricePromotions"
+    },
+    "availability_inventory": {
+      "$ref": "#/$defs/AvailabilityInventory"
+    },
+    "variants": {
+      "$ref": "#/$defs/Variants"
+    },
+    "fulfillment": {
+      "$ref": "#/$defs/Fulfillment"
+    },
+    "merchant_info": {
+      "$ref": "#/$defs/MerchantInfo"
+    },
+    "returns": {
+      "$ref": "#/$defs/Returns"
+    },
+    "performance_signals": {
+      "$ref": "#/$defs/PerformanceSignals"
+    },
+    "compliance": {
+      "$ref": "#/$defs/Compliance"
+    },
+    "reviews_qa": {
+      "$ref": "#/$defs/ReviewsQA"
+    },
+    "related_products": {
+      "$ref": "#/$defs/RelatedProducts"
+    },
+    "geo_tagging": {
+      "$ref": "#/$defs/GeoTagging"
+    }
+  },
+  "$defs": {
+    "OpenAIFlags": {
+      "type": "object",
+      "required": ["enable_search", "enable_checkout"],
+      "properties": {
+        "enable_search": {
+          "type": "boolean",
+          "description": "Controls whether product can be surfaced in ChatGPT search results"
+        },
+        "enable_checkout": {
+          "type": "boolean",
+          "description": "Allows direct purchase inside ChatGPT"
+        }
+      }
+    },
+    "BasicProductData": {
+      "type": "object",
+      "required": ["id", "title", "description", "link", "product_category"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Merchant product ID (unique)"
+        },
+        "gtin": {
+          "type": "string",
+          "pattern": "^\\d{8}$|^\\d{12}$|^\\d{13}$|^\\d{14}$",
+          "description": "Universal product identifier (8, 12, 13, or 14 digits)"
+        },
+        "mpn": {
+          "type": "string",
+          "maxLength": 70,
+          "description": "Manufacturer part number (required if GTIN missing)"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Product title"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 5000,
+          "description": "Full product description"
+        },
+        "link": {
+          "type": "string",
+          "format": "uri",
+          "description": "Product detail page URL"
+        }
+      }
+    },
+    "ItemInformation": {
+      "type": "object",
+      "required": ["product_category"],
+      "properties": {
+        "condition": {
+          "type": "string",
+          "enum": ["new", "refurbished", "used"],
+          "description": "Condition of product"
+        },
+        "product_category": {
+          "type": "string",
+          "description": "Category path (e.g., 'Apparel & Accessories > Shoes')"
+        },
+        "brand": {
+          "type": "string",
+          "maxLength": 70,
+          "description": "Product brand"
+        },
+        "material": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Primary material(s)"
+        },
+        "dimensions": {
+          "type": "string",
+          "description": "Overall dimensions (e.g., '12x8x5 in')"
+        },
+        "length": {
+          "type": "string",
+          "description": "Individual dimension"
+        },
+        "width": {
+          "type": "string",
+          "description": "Individual dimension"
+        },
+        "height": {
+          "type": "string",
+          "description": "Individual dimension"
+        },
+        "weight": {
+          "type": "string",
+          "description": "Product weight"
+        },
+        "age_group": {
+          "type": "string",
+          "enum": ["newborn", "infant", "toddler", "kids", "adult"],
+          "description": "Target demographic"
+        }
+      }
+    },
+    "Media": {
+      "type": "object",
+      "required": ["image_link"],
+      "properties": {
+        "image_link": {
+          "type": "string",
+          "format": "uri",
+          "description": "Main product image URL"
+        },
+        "additional_image_link": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "description": "Extra images"
+        },
+        "video_link": {
+          "type": "string",
+          "format": "uri",
+          "description": "Product video URL"
+        },
+        "model_3d_link": {
+          "type": "string",
+          "format": "uri",
+          "description": "3D model URL"
+        }
+      }
+    },
+    "PricePromotions": {
+      "type": "object",
+      "required": ["price"],
+      "properties": {
+        "price": {
+          "$ref": "#/$defs/Money"
+        },
+        "applicable_taxes_fees": {
+          "$ref": "#/$defs/Money"
+        },
+        "sale_price": {
+          "$ref": "#/$defs/Money"
+        },
+        "sale_price_effective_date": {
+          "type": "string",
+          "description": "Sale window (ISO 8601 date range, e.g., '2025-07-01 / 2025-07-15')"
+        },
+        "unit_pricing_measure": {
+          "type": "string",
+          "description": "Unit price measure"
+        },
+        "base_measure": {
+          "type": "string",
+          "description": "Base measure"
+        },
+        "pricing_trend": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Pricing trend information"
+        }
+      }
+    },
+    "AvailabilityInventory": {
+      "type": "object",
+      "required": ["availability", "inventory_quantity"],
+      "properties": {
+        "availability": {
+          "type": "string",
+          "enum": ["in_stock", "out_of_stock", "preorder"],
+          "description": "Product availability"
+        },
+        "availability_date": {
+          "type": "string",
+          "format": "date",
+          "description": "Availability date if preorder"
+        },
+        "inventory_quantity": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Stock count"
+        },
+        "expiration_date": {
+          "type": "string",
+          "format": "date",
+          "description": "Remove product after date"
+        },
+        "pickup_method": {
+          "type": "string",
+          "enum": ["in_store", "reserve", "not_supported"],
+          "description": "Pickup options"
+        },
+        "pickup_sla": {
+          "type": "string",
+          "description": "Pickup SLA"
+        }
+      }
+    },
+    "Variants": {
+      "type": "object",
+      "properties": {
+        "item_group_id": {
+          "type": "string",
+          "maxLength": 70,
+          "description": "Variant group ID"
+        },
+        "item_group_title": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Group product title"
+        },
+        "color": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Variant color"
+        },
+        "size": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Variant size"
+        },
+        "size_system": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 2,
+          "description": "Size system country code"
+        },
+        "gender": {
+          "type": "string",
+          "enum": ["male", "female", "unisex"],
+          "description": "Gender target"
+        },
+        "offer_id": {
+          "type": "string",
+          "description": "Offer ID (SKU+seller+price)"
+        },
+        "custom_variant1_category": {
+          "type": "string",
+          "description": "Custom variant dimension 1"
+        },
+        "custom_variant1_option": {
+          "type": "string",
+          "description": "Custom variant 1 option"
+        },
+        "custom_variant2_category": {
+          "type": "string",
+          "description": "Custom variant dimension 2"
+        },
+        "custom_variant2_option": {
+          "type": "string",
+          "description": "Custom variant 2 option"
+        },
+        "custom_variant3_category": {
+          "type": "string",
+          "description": "Custom variant dimension 3"
+        },
+        "custom_variant3_option": {
+          "type": "string",
+          "description": "Custom variant 3 option"
+        }
+      }
+    },
+    "Fulfillment": {
+      "type": "object",
+      "properties": {
+        "shipping": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Shipping method/cost/region (e.g., 'US:CA:Overnight:16.00 USD')"
+          },
+          "description": "Shipping methods"
+        },
+        "delivery_estimate": {
+          "type": "string",
+          "format": "date",
+          "description": "Estimated arrival date"
+        }
+      }
+    },
+    "MerchantInfo": {
+      "type": "object",
+      "required": ["seller_name", "seller_url", "return_policy"],
+      "properties": {
+        "seller_name": {
+          "type": "string",
+          "maxLength": 70,
+          "description": "Seller name"
+        },
+        "seller_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Seller page URL"
+        },
+        "seller_privacy_policy": {
+          "type": "string",
+          "format": "uri",
+          "description": "Seller-specific privacy policy"
+        },
+        "seller_tos": {
+          "type": "string",
+          "format": "uri",
+          "description": "Seller-specific terms of service"
+        }
+      }
+    },
+    "Returns": {
+      "type": "object",
+      "required": ["return_policy", "return_window"],
+      "properties": {
+        "return_policy": {
+          "type": "string",
+          "format": "uri",
+          "description": "Return policy URL"
+        },
+        "return_window": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Days allowed for return"
+        }
+      }
+    },
+    "PerformanceSignals": {
+      "type": "object",
+      "properties": {
+        "popularity_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Popularity indicator (0-5 scale)"
+        },
+        "return_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Return rate (0-100%)"
+        }
+      }
+    },
+    "Compliance": {
+      "type": "object",
+      "properties": {
+        "warning": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Product disclaimers"
+        },
+        "warning_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Warning URL"
+        },
+        "age_restriction": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Minimum purchase age"
+        }
+      }
+    },
+    "ReviewsQA": {
+      "type": "object",
+      "properties": {
+        "product_review_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of product reviews"
+        },
+        "product_review_rating": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Average review score (0-5)"
+        },
+        "store_review_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of brand/store reviews"
+        },
+        "store_review_rating": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Average store rating (0-5)"
+        },
+        "q_and_a": {
+          "type": "string",
+          "description": "FAQ content"
+        },
+        "raw_review_data": {
+          "type": "string",
+          "description": "Raw review payload"
+        }
+      }
+    },
+    "RelatedProducts": {
+      "type": "object",
+      "properties": {
+        "related_product_id": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Associated product IDs"
+        },
+        "relationship_type": {
+          "type": "string",
+          "enum": ["part_of_set", "required_part", "often_bought_with", "substitute", "different_brand", "accessory"],
+          "description": "Relationship type"
+        }
+      }
+    },
+    "GeoTagging": {
+      "type": "object",
+      "properties": {
+        "geo_price": {
+          "$ref": "#/$defs/Money"
+        },
+        "geo_availability": {
+          "type": "string",
+          "description": "Region-specific availability"
+        }
+      }
+    },
+    "Money": {
+      "type": "object",
+      "required": ["value", "currency"],
+      "properties": {
+        "value": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Monetary value"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "description": "Three-letter currency code (ISO 4217)"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/feed/ingestion.schema.json",
+  "title": "Product Feed Ingestion",
+  "description": "Schemas for product feed ingestion and processing",
+  "$defs": {
+    "FeedIngestionRequest": {
+      "type": "object",
+      "required": ["merchant_id", "feed_data", "format"],
+      "properties": {
+        "merchant_id": {
+          "type": "string",
+          "description": "Merchant identifier"
+        },
+        "feed_data": {
+          "type": "array",
+          "items": {
+            "$ref": "openai-product-feed.schema.json"
+          },
+          "description": "Array of product feed entries"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["json", "csv", "tsv", "xml"],
+          "description": "Feed format type"
+        },
+        "version": {
+          "type": "string",
+          "description": "Feed version"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Additional metadata"
+        }
+      }
+    },
+    "FeedIngestionResponse": {
+      "type": "object",
+      "required": ["ok", "processed_count", "error_count"],
+      "properties": {
+        "ok": {
+          "type": "boolean",
+          "description": "Whether ingestion was successful"
+        },
+        "processed_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of products processed"
+        },
+        "error_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of errors encountered"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of error messages"
+        },
+        "feed_id": {
+          "type": "string",
+          "description": "Generated feed ID"
+        },
+        "message": {
+          "type": "string",
+          "description": "Status message"
+        }
+      }
+    },
+    "ValidationError": {
+      "type": "object",
+      "required": ["field", "message", "severity", "code"],
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Field name"
+        },
+        "message": {
+          "type": "string",
+          "description": "Error message"
+        },
+        "product_id": {
+          "type": "string",
+          "description": "Product ID"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["error", "warning"],
+          "description": "Error severity"
+        },
+        "code": {
+          "type": "string",
+          "enum": [
+            "REQUIRED_FIELD",
+            "INVALID_FORMAT",
+            "INVALID_LENGTH",
+            "INVALID_VALUE",
+            "INVALID_URL",
+            "INVALID_DATE",
+            "INVALID_GTIN",
+            "INVALID_CURRENCY",
+            "INVALID_AVAILABILITY",
+            "INVALID_CONDITION",
+            "INVALID_AGE_GROUP",
+            "INVALID_GENDER",
+            "INVALID_RELATIONSHIP",
+            "INVALID_PICKUP_METHOD",
+            "INVALID_RATING",
+            "INVALID_PERCENTAGE",
+            "INVALID_COUNTRY_CODE"
+          ],
+          "description": "Error code"
+        }
+      }
+    },
+    "ValidationWarning": {
+      "type": "object",
+      "required": ["field", "message", "code"],
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Field name"
+        },
+        "message": {
+          "type": "string",
+          "description": "Warning message"
+        },
+        "product_id": {
+          "type": "string",
+          "description": "Product ID"
+        },
+        "code": {
+          "type": "string",
+          "description": "Warning code"
+        }
+      }
+    },
+    "FeedValidationResult": {
+      "type": "object",
+      "required": ["valid", "product_count", "valid_products"],
+      "properties": {
+        "valid": {
+          "type": "boolean",
+          "description": "Whether feed is valid"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ValidationError"
+          },
+          "description": "Validation errors"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ValidationWarning"
+          },
+          "description": "Validation warnings"
+        },
+        "product_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of products"
+        },
+        "valid_products": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of valid products"
+        }
+      }
+    },
+    "FeedStatus": {
+      "type": "object",
+      "required": ["feed_id", "merchant_id", "status", "product_count", "error_count", "last_updated"],
+      "properties": {
+        "feed_id": {
+          "type": "string",
+          "description": "Feed identifier"
+        },
+        "merchant_id": {
+          "type": "string",
+          "description": "Merchant identifier"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "processing", "completed", "failed"],
+          "description": "Processing status"
+        },
+        "processed_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Processing completion time"
+        },
+        "product_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of products"
+        },
+        "error_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of errors"
+        },
+        "last_updated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update time"
+        }
+      }
+    }
+  }
+}

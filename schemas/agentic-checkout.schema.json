@@ -1,0 +1,597 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/agentic-checkout.schema.json",
+  "title": "Agentic Checkout Specification",
+  "description": "Complete Agentic Checkout API specification for ChatGPT integration",
+  "$defs": {
+    "Address": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "line_one": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "line_two": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "city": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "state": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 2,
+          "description": "ISO-3166-1 alpha-2"
+        },
+        "postal_code": {
+          "type": "string",
+          "maxLength": 20
+        }
+      },
+      "required": [
+        "name",
+        "line_one",
+        "city",
+        "state",
+        "country",
+        "postal_code"
+      ]
+    },
+    "Buyer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "first_name": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "last_name": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 256
+        },
+        "phone_number": {
+          "type": "string",
+          "description": "E.164 format"
+        }
+      },
+      "required": ["first_name", "last_name", "email"]
+    },
+    "Item": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Id of merchandise that can be purchased"
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Quantity of the item for fulfillment"
+        }
+      },
+      "required": ["id", "quantity"]
+    },
+    "PaymentProvider": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["stripe"]
+        },
+        "supported_payment_methods": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["card"]
+          }
+        }
+      },
+      "required": ["provider", "supported_payment_methods"]
+    },
+    "LineItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Id of the line item (different from item id)"
+        },
+        "item": {
+          "$ref": "#/$defs/Item"
+        },
+        "base_amount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Item base amount before adjustments"
+        },
+        "discount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Discount applied to the item"
+        },
+        "subtotal": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Amount after all adjustments"
+        },
+        "tax": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Tax amount"
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total amount"
+        }
+      },
+      "required": [
+        "id",
+        "item",
+        "base_amount",
+        "discount",
+        "subtotal",
+        "tax",
+        "total"
+      ]
+    },
+    "Total": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "items_base_amount",
+            "items_discount",
+            "subtotal",
+            "discount",
+            "fulfillment",
+            "tax",
+            "fee",
+            "total"
+          ]
+        },
+        "display_text": {
+          "type": "string",
+          "description": "Text displayed to customer"
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Amount in minor units"
+        }
+      },
+      "required": ["type", "display_text", "amount"]
+    },
+    "FulfillmentOptionShipping": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "shipping"
+        },
+        "id": {
+          "type": "string",
+          "description": "Unique ID for shipping option"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of shipping option"
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "Estimated timeline for shipping"
+        },
+        "carrier": {
+          "type": "string",
+          "description": "Name of shipping carrier"
+        },
+        "earliest_delivery_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Earliest delivery time (RFC 3339)"
+        },
+        "latest_delivery_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Latest delivery time (RFC 3339)"
+        },
+        "subtotal": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Subtotal cost of shipping"
+        },
+        "tax": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Tax amount"
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total cost of shipping"
+        }
+      },
+      "required": ["type", "id", "title", "subtitle", "carrier", "earliest_delivery_time", "latest_delivery_time", "subtotal", "tax", "total"]
+    },
+    "FulfillmentOptionDigital": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "digital"
+        },
+        "id": {
+          "type": "string",
+          "description": "Unique ID for digital option"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of digital option"
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "How item will be digitally delivered"
+        },
+        "subtotal": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Subtotal cost of digital delivery"
+        },
+        "tax": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Tax amount"
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total cost of digital delivery"
+        }
+      },
+      "required": ["type", "id", "title", "subtotal", "tax", "total"]
+    },
+    "MessageInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "info"
+        },
+        "param": {
+          "type": "string",
+          "description": "RFC 9535 JSONPath"
+        },
+        "content_type": {
+          "type": "string",
+          "enum": ["plain", "markdown"]
+        },
+        "content": {
+          "type": "string",
+          "description": "Raw message content"
+        }
+      },
+      "required": ["type", "param", "content_type", "content"]
+    },
+    "MessageError": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "error"
+        },
+        "code": {
+          "type": "string",
+          "enum": [
+            "missing",
+            "invalid",
+            "out_of_stock",
+            "payment_declined",
+            "requires_sign_in",
+            "requires_3ds"
+          ]
+        },
+        "param": {
+          "type": "string",
+          "description": "RFC 9535 JSONPath"
+        },
+        "content_type": {
+          "type": "string",
+          "enum": ["plain", "markdown"]
+        },
+        "content": {
+          "type": "string",
+          "description": "Raw message content"
+        }
+      },
+      "required": ["type", "code", "content_type", "content"]
+    },
+    "Link": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["terms_of_use", "privacy_policy", "seller_shop_policies"]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "required": ["type", "url"]
+    },
+    "PaymentData": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "Token representing payment method"
+        },
+        "provider": {
+          "type": "string",
+          "enum": ["stripe"]
+        },
+        "billing_address": {
+          "$ref": "#/$defs/Address"
+        }
+      },
+      "required": ["token", "provider"]
+    },
+    "Order": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique order identifier"
+        },
+        "checkout_session_id": {
+          "type": "string",
+          "description": "Checkout session that created this order"
+        },
+        "permalink_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to view order details"
+        }
+      },
+      "required": ["id", "checkout_session_id", "permalink_url"]
+    },
+    "Refund": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["store_credit", "original_payment"]
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total amount of money refunded"
+        }
+      },
+      "required": ["type", "amount"]
+    },
+    "CheckoutSessionBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique checkout session identifier"
+        },
+        "buyer": {
+          "$ref": "#/$defs/Buyer"
+        },
+        "payment_provider": {
+          "$ref": "#/$defs/PaymentProvider"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "not_ready_for_payment",
+            "ready_for_payment",
+            "completed",
+            "canceled",
+            "in_progress"
+          ]
+        },
+        "currency": {
+          "type": "string",
+          "description": "ISO 4217 currency code (lowercase)"
+        },
+        "line_items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LineItem"
+          }
+        },
+        "fulfillment_address": {
+          "$ref": "#/$defs/Address"
+        },
+        "fulfillment_options": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/FulfillmentOptionShipping"
+              },
+              {
+                "$ref": "#/$defs/FulfillmentOptionDigital"
+              }
+            ]
+          }
+        },
+        "fulfillment_option_id": {
+          "type": "string",
+          "description": "Selected fulfillment option ID"
+        },
+        "totals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Total"
+          }
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/MessageInfo"
+              },
+              {
+                "$ref": "#/$defs/MessageError"
+              }
+            ]
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Link"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "currency",
+        "line_items",
+        "totals",
+        "fulfillment_options",
+        "messages",
+        "links"
+      ]
+    },
+    "CheckoutSession": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/CheckoutSessionBase"
+        }
+      ]
+    },
+    "CheckoutSessionWithOrder": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/CheckoutSessionBase"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "order": {
+              "$ref": "#/$defs/Order"
+            }
+          },
+          "required": ["order"]
+        }
+      ]
+    },
+    "CheckoutSessionCreateRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "buyer": {
+          "$ref": "#/$defs/Buyer"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Item"
+          },
+          "minItems": 1
+        },
+        "fulfillment_address": {
+          "$ref": "#/$defs/Address"
+        }
+      },
+      "required": ["items"]
+    },
+    "CheckoutSessionUpdateRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "buyer": {
+          "$ref": "#/$defs/Buyer"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Item"
+          }
+        },
+        "fulfillment_address": {
+          "$ref": "#/$defs/Address"
+        },
+        "fulfillment_option_id": {
+          "type": "string"
+        }
+      }
+    },
+    "CheckoutSessionCompleteRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "buyer": {
+          "$ref": "#/$defs/Buyer"
+        },
+        "payment_data": {
+          "$ref": "#/$defs/PaymentData"
+        }
+      },
+      "required": ["payment_data"]
+    },
+    "Error": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "invalid_request",
+            "request_not_idempotent",
+            "processing_error",
+            "service_unavailable"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "description": "Implementation-defined error code"
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable error description"
+        },
+        "param": {
+          "type": "string",
+          "description": "RFC 9535 JSONPath (optional)"
+        }
+      },
+      "required": ["type", "code", "message"]
+    }
+  }
+}
