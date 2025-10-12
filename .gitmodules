@@ -1,3 +1,9 @@
 [submodule "path/to/submodule"]
 	path = path/to/submodule
 	url = https://github.com/agentic-commerce-protocol/agentic-commerce-protocol.git
+[submodule "agentic-commerce-protocol"]
+	path = agentic-commerce-protocol
+	url = https://github.com/agentic-commerce-protocol/agentic-commerce-protocol.git
+[submodule "libs/acp"]
+	path = libs/acp
+	url = https://github.com/agentic-commerce-protocol/agentic-commerce-protocol.git
