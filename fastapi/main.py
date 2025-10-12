@@ -3,6 +3,18 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any, Literal
 import os, hmac, hashlib, time
 from datetime import datetime, timedelta
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),  # Console output
+        logging.FileHandler('acp_gateway.log')  # File output
+    ]
+)
+logger = logging.getLogger(__name__)
 try:
     # Try relative imports first (when running as module)
     from .product_feed_models import (
@@ -285,12 +297,16 @@ async def ingest_product_feed(
     authorization: Optional[str] = Header(None)
 ):
     """Ingest a product feed according to OpenAI Product Feed Specification"""
+    logger.info(f"Feed ingestion request received - Merchant: {request.merchant_id}, Products: {len(request.feed_data)}")
     require_api_key(authorization)
     
     # Validate the feed
     validation_result = feed_validator.validate_feed_ingestion_request(request)
     
     if not validation_result.valid:
+        logger.error(f"Feed validation failed for merchant {request.merchant_id}: {len(validation_result.errors or [])} errors")
+        for err in validation_result.errors or []:
+            logger.error(f"Validation error: {err.field}: {err.message}")
         return FeedIngestionResponse(
             ok=False,
             processed_count=0,
@@ -442,6 +458,7 @@ async def validate_product_feed(
     authorization: Optional[str] = Header(None)
 ):
     """Validate a single product feed entry"""
+    logger.info(f"Feed validation request received - Product ID: {feed.basic_data.id}")
     require_api_key(authorization)
     
     validation_result = feed_validator.validate_product_feed(feed)
