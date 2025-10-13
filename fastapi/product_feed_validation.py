@@ -204,14 +204,6 @@ class ProductFeedValidator:
                 message="GTIN is recommended for better product identification",
                 code="MISSING_RECOMMENDED_FIELD"
             ))
-        
-        # Warn if brand is missing (recommended field)
-        if not data.item_info.brand:
-            warnings.append(ValidationWarning(
-                field="brand",
-                message="Brand is recommended for better product discoverability",
-                code="MISSING_RECOMMENDED_FIELD"
-            ))
     
     def _validate_item_info(self, info, product_id: str, errors: List[ValidationError], warnings: List[ValidationWarning]):
         """Validate item information"""
@@ -222,6 +214,15 @@ class ProductFeedValidator:
                 product_id=product_id,
                 severity="error",
                 code="REQUIRED_FIELD"
+            ))
+        
+        # Warn if brand is missing (recommended field)
+        if not info.brand:
+            warnings.append(ValidationWarning(
+                field="brand",
+                message="Brand is recommended for better product discoverability",
+                product_id=product_id,
+                code="MISSING_RECOMMENDED_FIELD"
             ))
     
     def _validate_media(self, media, product_id: str, errors: List[ValidationError]):
