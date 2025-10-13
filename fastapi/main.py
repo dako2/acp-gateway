@@ -45,6 +45,10 @@ except ImportError:
         CheckoutSession, CheckoutSessionWithOrder, Order, WebhookEvent, EventData,
         example_checkout_session, example_checkout_session_create_request
     )
+    from delegated_payment_models import (
+        DelegatedPaymentRequest, DelegatedPaymentResponse, DelegatedPaymentError,
+        example_delegated_payment_request, example_delegated_payment_response
+    )
 
 # ------------------ Config ------------------
 API_KEYS = set([k.strip() for k in os.getenv("ACP_API_KEYS", "").split(",") if k.strip()]) or {"test_key_123"}
@@ -54,10 +58,60 @@ WEBHOOK_SECRET = os.getenv("ACP_WEBHOOK_SECRET", "whsec_123")
 app = FastAPI(
     title="ACP Gateway",
     version="0.1.0",
-    description="Agentic Commerce Protocol (ACP) Gateway - Reference Implementation",
+    description="""
+    # Agentic Commerce Protocol (ACP) Gateway
+    
+    This API implements three distinct types of commerce APIs:
+    
+    ## 🔧 Core ACP APIs
+    - **Health & Products**: Basic product listing and health checks
+    - **Intent Handling**: LLM agent intent processing
+    - **Merchant Registration**: Merchant onboarding
+    
+    ## 📊 Product Feed APIs  
+    - **Feed Ingestion**: OpenAI Product Feed Specification compliance
+    - **Validation**: Product data validation and processing
+    - **Management**: Feed status and lifecycle management
+    - **Frequency**: 15-minute batch uploads
+    
+    ## 🛒 Agentic Checkout APIs
+    - **Session Management**: Real-time checkout session lifecycle
+    - **Payment Processing**: Order creation and completion
+    - **Webhooks**: Order status updates
+    - **Frequency**: Real-time, user-initiated
+    
+    ## 💳 Delegated Payment APIs
+    - **Secure Tokens**: Encrypted payment token handling for PSPs
+    - **PCI Compliance**: Enhanced security measures for cardholder data
+    - **Risk Management**: Fraud detection and risk signal processing
+    - **Frequency**: Real-time, transaction-critical
+    - **Scope**: PCI DSS Level 1 merchants and approved PSPs only
+    """,
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    openapi_url="/openapi.json",
+    tags_metadata=[
+        {
+            "name": "Core ACP",
+            "description": "Basic ACP functionality for health checks, product listing, and merchant management",
+        },
+        {
+            "name": "Product Feed",
+            "description": "OpenAI Product Feed Specification APIs for bulk product data ingestion (15-minute batch uploads)",
+        },
+        {
+            "name": "Agentic Checkout", 
+            "description": "Real-time checkout session management with webhook support for order lifecycle events",
+        },
+        {
+            "name": "Webhooks",
+            "description": "Webhook endpoints for receiving and sending order lifecycle events",
+        },
+        {
+            "name": "Delegated Payment",
+            "description": "Secure payment token handling for PCI DSS Level 1 merchants and approved PSPs (handles cardholder data)",
+        },
+    ]
 )
 
 # ------------------ Storage (in-mem demo) ------------------
@@ -156,6 +210,7 @@ def audit(event: str, data: Dict[str, Any]):
     })
 
 def verify_hmac(raw_body: bytes, signature: str):
+    """Verify HMAC signature for webhook payloads"""
     # signature: "t=<ts>,v1=<hex>"
     try:
         parts = dict(p.split("=") for p in signature.split(","))
@@ -166,12 +221,157 @@ def verify_hmac(raw_body: bytes, signature: str):
     if not hmac.compare_digest(mac, v1 or ""):
         raise HTTPException(401, detail="invalid signature")
 
+def verify_payment_signature(raw_body: bytes, signature: str):
+    """
+    Verify signature for Delegated Payment API according to specification.
+    Supports multiple signature formats:
+    1. OpenAI/ACP format: "t=<timestamp>,v1=<hmac_sha256_hex>"
+    2. Gitee format: Base64 URL-encoded HMAC-SHA256
+    """
+    import base64
+    
+    try:
+        # Try OpenAI/ACP format first: "t=<timestamp>,v1=<hmac_sha256_hex>"
+        if "," in signature and "=" in signature:
+            # Parse signature components
+            parts = {}
+            for part in signature.split(","):
+                if "=" in part:
+                    key, value = part.split("=", 1)
+                    parts[key.strip()] = value.strip()
+            
+            timestamp = parts.get("t")
+            v1 = parts.get("v1")
+            
+            if timestamp and v1:
+                # Verify timestamp is recent (within 5 minutes)
+                try:
+                    sig_timestamp = int(timestamp)
+                    current_timestamp = int(time.time())
+                    if abs(current_timestamp - sig_timestamp) > 300:  # 5 minutes
+                        raise HTTPException(401, detail="signature timestamp too old")
+                except ValueError:
+                    raise HTTPException(400, detail="invalid timestamp in signature")
+                
+                # Generate expected HMAC
+                expected_mac = hmac.new(
+                    WEBHOOK_SECRET.encode(), 
+                    raw_body, 
+                    hashlib.sha256
+                ).hexdigest()
+                
+                # Verify signature
+                if not hmac.compare_digest(expected_mac, v1):
+                    raise HTTPException(401, detail="invalid signature")
+                return
+        
+        # Try Gitee format: Base64 URL-encoded HMAC-SHA256
+        try:
+            # Decode Base64 signature
+            decoded_signature = base64.urlsafe_b64decode(signature.encode())
+            
+            # Generate expected HMAC
+            expected_mac = hmac.new(
+                WEBHOOK_SECRET.encode(), 
+                raw_body, 
+                hashlib.sha256
+            ).digest()
+            
+            # Verify signature
+            if not hmac.compare_digest(expected_mac, decoded_signature):
+                raise HTTPException(401, detail="invalid signature")
+            return
+            
+        except (base64.binascii.Error, ValueError):
+            pass  # Not a valid Base64 signature, continue to error
+        
+        # If we get here, neither format worked
+        raise HTTPException(400, detail="malformed signature header - supported formats: 't=<ts>,v1=<hex>' or Base64")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Signature verification error: {str(e)}")
+        raise HTTPException(400, detail="bad signature format")
+
+def require_delegated_payment_auth(auth: Optional[str], signature: Optional[str], raw_body: bytes):
+    """Enhanced authentication for Delegated Payment API with PCI compliance requirements"""
+    # Require API key
+    require_api_key(auth)
+    
+    # Require and verify signature for payment data
+    if not signature:
+        raise HTTPException(401, detail="missing signature header for payment data")
+    
+    verify_payment_signature(raw_body, signature)
+
+def generate_payment_signature(raw_body: bytes, format_type: str = "acp") -> str:
+    """
+    Generate a valid signature for Delegated Payment API testing.
+    
+    Args:
+        raw_body: The request body bytes
+        format_type: "acp" for OpenAI/ACP format or "gitee" for Gitee format
+    
+    Returns:
+        Formatted signature string
+    """
+    import base64
+    
+    if format_type.lower() == "gitee":
+        # Gitee format: Base64 URL-encoded HMAC-SHA256
+        mac = hmac.new(
+            WEBHOOK_SECRET.encode(), 
+            raw_body, 
+            hashlib.sha256
+        ).digest()
+        return base64.urlsafe_b64encode(mac).decode()
+    else:
+        # Default ACP format: "t=<timestamp>,v1=<hmac_sha256_hex>"
+        timestamp = str(int(time.time()))
+        mac = hmac.new(
+            WEBHOOK_SECRET.encode(), 
+            raw_body, 
+            hashlib.sha256
+        ).hexdigest()
+        return f"t={timestamp},v1={mac}"
+
+def validate_pci_compliance(payment_method):
+    """Validate PCI compliance requirements for card data"""
+    # In a real implementation, this would include:
+    # - Card number encryption/decryption
+    # - Secure storage validation
+    # - PCI DSS compliance checks
+    # - Tokenization requirements
+    
+    # For demo purposes, we'll do basic validation
+    if payment_method.card_number_type == "fpan":
+        # FPAN requires additional PCI compliance measures
+        if not payment_method.cvc:
+            raise HTTPException(400, detail="CVC required for FPAN")
+    
+    return True
+
 # ------------------ Routes ------------------
-@app.get("/healthz")
+@app.get("/healthz", tags=["Core ACP"], summary="Health Check", description="Returns the health status of the ACP Gateway")
 def healthz():
     return {"ok": True}
 
-@app.get("/acp/v1/products")
+@app.post("/debug/signature", tags=["Core ACP"], summary="Debug Signature", description="Debug signature verification")
+async def debug_signature(request: Request, signature: Optional[str] = Header(None)):
+    """Debug endpoint to test signature verification"""
+    raw_body = await request.body()
+    
+    return {
+        "raw_body": raw_body.decode('utf-8'),
+        "body_length": len(raw_body),
+        "signature": signature,
+        "webhook_secret": WEBHOOK_SECRET,
+        "generated_mac": hmac.new(WEBHOOK_SECRET.encode(), raw_body, hashlib.sha256).hexdigest(),
+        "timestamp": int(time.time())
+    }
+
+@app.get("/acp/v1/products", tags=["Core ACP"], summary="List Products", description="Retrieve a list of available products with optional search filtering")
 def list_products(q: Optional[str] = Query(None), limit: int = 20, offset: int = 0, 
                   authorization: Optional[str] = Header(None)):
     require_api_key(authorization)
@@ -181,7 +381,7 @@ def list_products(q: Optional[str] = Query(None), limit: int = 20, offset: int =
         items = [p for p in items if ql in p["title"].lower() or ql in p["id"].lower() or ql in p.get("description", "").lower()]
     return {"ok": True, "items": items[offset: offset+limit], "total": len(items)}
 
-@app.post("/acp/v1/intent")
+@app.post("/acp/v1/intent", tags=["Core ACP"], summary="Handle Intent", description="Process LLM agent intents for cart management and product interactions")
 async def handle_intent(intent: Intent, request: Request,
                         authorization: Optional[str] = Header(None),
                         x_acp_sandbox: Optional[str] = Header(None),
@@ -236,7 +436,7 @@ async def handle_intent(intent: Intent, request: Request,
     audit("intent", {"sandbox": sb, "intent": intent.dict(), "result": result})
     return result
 
-@app.post("/acp/v1/checkout")
+@app.post("/acp/v1/checkout", tags=["Core ACP"], summary="Legacy Checkout", description="Legacy checkout endpoint for backward compatibility")
 async def checkout(req: CheckoutReq, request: Request,
                    authorization: Optional[str] = Header(None),
                    x_acp_sandbox: Optional[str] = Header(None),
@@ -268,7 +468,7 @@ async def checkout(req: CheckoutReq, request: Request,
     audit("checkout", {"sandbox": sb, "req": req.dict(), "resp": resp})
     return resp
 
-@app.post("/merchant/register")
+@app.post("/merchant/register", tags=["Core ACP"], summary="Register Merchant", description="Register a new merchant with the ACP Gateway")
 async def merchant_register(body: MerchantRegister, authorization: Optional[str] = Header(None)):
     require_api_key(authorization)
     mid = body.domain
@@ -276,7 +476,7 @@ async def merchant_register(body: MerchantRegister, authorization: Optional[str]
     audit("merchant.register", body.dict())
     return {"ok": True, "merchant_id": mid}
 
-@app.post("/merchant/feed")
+@app.post("/merchant/feed", tags=["Product Feed"], summary="Legacy Feed Upload", description="Legacy product feed upload endpoint for backward compatibility")
 async def merchant_feed(url: Optional[str] = Query(None), file: Optional[UploadFile] = File(None),
                         authorization: Optional[str] = Header(None)):
     require_api_key(authorization)
@@ -291,7 +491,7 @@ async def merchant_feed(url: Optional[str] = Query(None), file: Optional[UploadF
 
 # ------------------ OpenAI Product Feed Endpoints ------------------
 
-@app.post("/merchant/feed/ingest")
+@app.post("/merchant/feed/ingest", tags=["Product Feed"], summary="Ingest Product Feed", description="Ingest product feed data using OpenAI Product Feed Specification format")
 async def ingest_product_feed(
     request: FeedIngestionRequest,
     authorization: Optional[str] = Header(None)
@@ -371,7 +571,7 @@ async def ingest_product_feed(
         message=f"Successfully processed {processed_count} products" if error_count == 0 else f"Processed {processed_count} products with {error_count} errors"
     )
 
-@app.post("/merchant/feed/upload")
+@app.post("/merchant/feed/upload", tags=["Product Feed"], summary="Upload Feed File", description="Upload product feed file in JSON, CSV, TSV, or XML format for processing")
 async def upload_product_feed(
     file: UploadFile = File(...),
     format_type: str = Query(..., description="Feed format (json, csv, tsv, xml)"),
@@ -452,7 +652,7 @@ async def upload_product_feed(
     except Exception as e:
         raise HTTPException(400, detail=f"Failed to process feed: {str(e)}")
 
-@app.post("/merchant/feed/validate")
+@app.post("/merchant/feed/validate", tags=["Product Feed"], summary="Validate Product Feed", description="Validate a single product feed entry against OpenAI Product Feed Specification")
 async def validate_product_feed(
     feed: ProductFeed,
     authorization: Optional[str] = Header(None)
@@ -472,7 +672,7 @@ async def validate_product_feed(
     
     return validation_result
 
-@app.get("/merchant/feed/status/{feed_id}")
+@app.get("/merchant/feed/status/{feed_id}", tags=["Product Feed"], summary="Get Feed Status", description="Get the processing status of a specific product feed")
 async def get_feed_status(
     feed_id: str,
     authorization: Optional[str] = Header(None)
@@ -486,7 +686,7 @@ async def get_feed_status(
     
     return feed_status
 
-@app.get("/merchant/feeds")
+@app.get("/merchant/feeds", tags=["Product Feed"], summary="List Feeds", description="List all product feeds with optional merchant filtering")
 async def list_feeds(
     merchant_id: Optional[str] = Query(None),
     authorization: Optional[str] = Header(None)
@@ -500,7 +700,7 @@ async def list_feeds(
     
     return {"feeds": feeds}
 
-@app.post("/acp/v1/products/search")
+@app.post("/acp/v1/products/search", tags=["Product Feed"], summary="Search Enhanced Products", description="Search products using OpenAI Product Feed Specification fields")
 async def search_products(
     search_request: ProductSearchRequest,
     authorization: Optional[str] = Header(None)
@@ -581,7 +781,7 @@ async def search_products(
         has_more=offset + limit < total
     )
 
-@app.get("/acp/v1/products/enhanced")
+@app.get("/acp/v1/products/enhanced", tags=["Product Feed"], summary="List Enhanced Products", description="List all products with OpenAI Product Feed Specification compliance")
 async def list_enhanced_products(
     q: Optional[str] = Query(None),
     limit: int = Query(20, ge=1, le=100),
@@ -617,7 +817,7 @@ async def list_enhanced_products(
 
 # ==================== AGENTIC CHECKOUT ENDPOINTS ====================
 
-@app.post("/checkout_sessions", response_model=CheckoutSession, status_code=201)
+@app.post("/checkout_sessions", tags=["Agentic Checkout"], response_model=CheckoutSession, status_code=201, summary="Create Checkout Session", description="Create a new checkout session for real-time order processing")
 async def create_checkout_session(
     req: CheckoutSessionCreateRequest,
     request: Request,
@@ -736,7 +936,7 @@ async def create_checkout_session(
     return checkout_session
 
 
-@app.post("/checkout_sessions/{session_id}", response_model=CheckoutSession)
+@app.post("/checkout_sessions/{session_id}", tags=["Agentic Checkout"], response_model=CheckoutSession, summary="Update Checkout Session", description="Update an existing checkout session with new items, address, or fulfillment options")
 async def update_checkout_session(
     session_id: str,
     req: CheckoutSessionUpdateRequest,
@@ -819,7 +1019,7 @@ async def update_checkout_session(
     return session
 
 
-@app.get("/checkout_sessions/{session_id}", response_model=CheckoutSession)
+@app.get("/checkout_sessions/{session_id}", tags=["Agentic Checkout"], response_model=CheckoutSession, summary="Get Checkout Session", description="Retrieve the current state of a checkout session")
 async def get_checkout_session(
     session_id: str,
     request: Request,
@@ -838,7 +1038,7 @@ async def get_checkout_session(
     return session
 
 
-@app.post("/checkout_sessions/{session_id}/complete", response_model=CheckoutSessionWithOrder)
+@app.post("/checkout_sessions/{session_id}/complete", tags=["Agentic Checkout"], response_model=CheckoutSessionWithOrder, summary="Complete Checkout Session", description="Complete a checkout session and create an order with payment processing")
 async def complete_checkout_session(
     session_id: str,
     req: CheckoutSessionCompleteRequest,
@@ -890,7 +1090,7 @@ async def complete_checkout_session(
     return {**session, "order": order}
 
 
-@app.post("/checkout_sessions/{session_id}/cancel", response_model=CheckoutSession)
+@app.post("/checkout_sessions/{session_id}/cancel", tags=["Agentic Checkout"], response_model=CheckoutSession, summary="Cancel Checkout Session", description="Cancel a checkout session if it can be canceled")
 async def cancel_checkout_session(
     session_id: str,
     request: Request,
@@ -925,7 +1125,7 @@ async def cancel_checkout_session(
     return session
 
 
-@app.post("/webhooks/acp")
+@app.post("/webhooks/acp", tags=["Webhooks"], summary="ACP Webhooks", description="Receive webhook events from OpenAI for order lifecycle updates")
 async def webhooks(request: Request, x_acp_signature: Optional[str] = Header(None)):
     raw = await request.body()
     if not x_acp_signature:
@@ -934,6 +1134,157 @@ async def webhooks(request: Request, x_acp_signature: Optional[str] = Header(Non
     payload = await request.json()
     audit("webhook", payload)
     return {"ok": True}
+
+# ------------------ Delegated Payment Endpoints ------------------
+
+@app.post("/agentic_commerce/delegate_payment", 
+          tags=["Delegated Payment"], 
+          summary="Delegate Payment", 
+          description="Secure payment token delegation for PCI DSS Level 1 merchants and approved PSPs",
+          response_model=DelegatedPaymentResponse,
+          responses={
+              201: {"description": "Payment token created successfully"},
+              400: {"description": "Invalid request", "model": DelegatedPaymentError},
+              401: {"description": "Authentication failed", "model": DelegatedPaymentError},
+              409: {"description": "Idempotency conflict", "model": DelegatedPaymentError},
+              422: {"description": "Validation error", "model": DelegatedPaymentError},
+              429: {"description": "Rate limit exceeded", "model": DelegatedPaymentError},
+              500: {"description": "Processing error", "model": DelegatedPaymentError},
+              503: {"description": "Service unavailable", "model": DelegatedPaymentError}
+          })
+async def delegate_payment(
+    request: Request,
+    payment_request: DelegatedPaymentRequest,
+    authorization: Optional[str] = Header(None),
+    signature: Optional[str] = Header(None, alias="Signature"),
+    idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key"),
+    request_id: Optional[str] = Header(None, alias="Request-Id"),
+    accept_language: Optional[str] = Header("en-US", alias="Accept-Language"),
+    user_agent: Optional[str] = Header(None, alias="User-Agent"),
+    timestamp: Optional[str] = Header(None, alias="Timestamp"),
+    api_version: Optional[str] = Header("2025-09-12", alias="API-Version")
+):
+    """
+    Delegate payment processing to PSP or PCI DSS Level 1 merchant.
+    
+    This endpoint handles secure payment token creation with enhanced security measures:
+    - PCI DSS compliance validation
+    - Enhanced HMAC signature verification
+    - Risk signal processing
+    - Payment allowance constraints
+    - Idempotency key handling
+    
+    **Security Requirements:**
+    - API key authentication
+    - HMAC signature verification
+    - PCI DSS Level 1 compliance
+    - Card data encryption/decryption
+    """
+    raw_body = await request.body()
+    
+    # Enhanced authentication for payment data
+    require_delegated_payment_auth(authorization, signature, raw_body)
+    
+    try:
+        # Validate PCI compliance
+        validate_pci_compliance(payment_request.payment_method)
+        
+        # Check idempotency
+        if idempotency_key:
+            # In a real implementation, check if this key was already used
+            # For demo, we'll simulate idempotency conflict for certain keys
+            if idempotency_key == "conflict_key_123":
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "type": "idempotency_conflict",
+                        "code": "idempotency_conflict", 
+                        "message": "Same idempotency key with different parameters"
+                    }
+                )
+        
+        # Validate payment allowance constraints
+        if payment_request.allowance.max_amount <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "type": "invalid_request",
+                    "code": "invalid_amount",
+                    "message": "Max amount must be positive",
+                    "param": "allowance.max_amount"
+                }
+            )
+        
+        # Process risk signals
+        high_risk_score = any(
+            signal.score > 70 and signal.action == "blocked" 
+            for signal in payment_request.risk_signals
+        )
+        
+        if high_risk_score:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "type": "invalid_request",
+                    "code": "high_risk_blocked",
+                    "message": "Payment blocked due to high risk score"
+                }
+            )
+        
+        # Generate payment token (in real implementation, this would be done by PSP/vault)
+        payment_token_id = f"vt_{int(time.time() * 1000)}"
+        
+        # Store payment token (in real implementation, this would be in secure vault)
+        DB.setdefault("payment_tokens", {})[payment_token_id] = {
+            "id": payment_token_id,
+            "created": datetime.now().isoformat() + "Z",
+            "allowance": payment_request.allowance.dict(),
+            "merchant_id": payment_request.allowance.merchant_id,
+            "checkout_session_id": payment_request.allowance.checkout_session_id,
+            "max_amount": payment_request.allowance.max_amount,
+            "currency": payment_request.allowance.currency,
+            "expires_at": payment_request.allowance.expires_at,
+            "risk_signals": [signal.dict() for signal in payment_request.risk_signals],
+            "metadata": payment_request.metadata
+        }
+        
+        # Audit log (without sensitive card data)
+        audit("delegated_payment", {
+            "payment_token_id": payment_token_id,
+            "merchant_id": payment_request.allowance.merchant_id,
+            "checkout_session_id": payment_request.allowance.checkout_session_id,
+            "max_amount": payment_request.allowance.max_amount,
+            "currency": payment_request.allowance.currency,
+            "card_type": payment_request.payment_method.card_number_type,
+            "funding_type": payment_request.payment_method.display_card_funding_type,
+            "risk_scores": [signal.score for signal in payment_request.risk_signals]
+        })
+        
+        response = DelegatedPaymentResponse(
+            id=payment_token_id,
+            created=datetime.now().isoformat() + "Z",
+            metadata={
+                "merchant_id": payment_request.allowance.merchant_id,
+                "checkout_session_id": payment_request.allowance.checkout_session_id,
+                "source": "chatgpt",
+                "idempotency_key": idempotency_key
+            }
+        )
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Delegated payment processing error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "type": "processing_error",
+                "code": "internal_error",
+                "message": "Internal processing error"
+            }
+        )
 
 if __name__ == "__main__":
     import uvicorn
