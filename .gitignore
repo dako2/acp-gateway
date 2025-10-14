@@ -363,3 +363,18 @@ coverage/
 
 # Node.js debugging
 .vscode-test
+
+prompt.txt
+llm.txt
+review-acp-alignment.py
+./run-tests.sh
+.venv/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+.env.development
+.env.test
+.env.production
