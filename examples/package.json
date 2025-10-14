@@ -1,21 +1,30 @@
 {
   "name": "acp-gateway-examples",
-  "version": "0.1.0",
-  "description": "Example scripts for testing ACP Gateway implementations",
-  "main": "test-express.js",
+  "version": "1.0.0",
+  "description": "Test scripts and examples for ACP Gateway",
+  "main": "test-merchant-flow.js",
   "scripts": {
+    "test": "node test-merchant-flow.js",
     "test-fastapi": "python test-fastapi.py",
-    "test-express": "node test-express.js"
+    "test-express": "node test-express.js",
+    "test-merchant": "node test-merchant-flow.js",
+    "llm-agent": "node llm-agent-server.js",
+    "push-service": "node acp-gateway-push-service.js start",
+    "demo-flow": "node demo-proper-flow.js",
+    "install-deps": "npm install"
   },
   "dependencies": {
-    "axios": "^1.12.2"
+    "axios": "^1.6.0",
+    "express": "^5.1.0",
+    "form-data": "^4.0.0"
   },
   "keywords": [
     "acp",
-    "gateway",
+    "merchant",
     "test",
+    "commerce",
     "examples"
   ],
-  "author": "",
+  "author": "ACP Gateway",
   "license": "MIT"
 }

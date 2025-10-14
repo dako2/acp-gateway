@@ -70,6 +70,96 @@ export PATH="/usr/local/go/bin:$PATH"
 ./run-tests.sh
 ```
 
+## Examples & Test Scripts
+
+The `examples/` directory contains comprehensive test scripts and integration examples:
+
+### 📁 Available Examples
+
+| File | Description | Purpose |
+|------|-------------|---------|
+| `test-fastapi.py` | Python test script | Test FastAPI implementation |
+| `test-express.js` | JavaScript test script | Test Express implementation |
+| `test-merchant-flow.js` | **Complete merchant workflow test** | Test full merchant onboarding & product feeds |
+| `architecture-design-guide.md` | **Integration design guide** | How to build merchant & LLM agent integrations |
+
+### 🚀 Running Examples
+
+```bash
+# Navigate to examples
+cd examples
+
+# Install dependencies
+npm install
+
+# Run merchant flow test (comprehensive)
+npm run test-merchant
+# or
+node test-merchant-flow.js
+
+# Run other test scripts
+npm run test-fastapi    # Python FastAPI tests
+npm run test-express    # JavaScript Express tests
+```
+
+### 🏪 Merchant Flow Test
+
+The `test-merchant-flow.js` script provides comprehensive testing of the complete merchant workflow:
+
+- ✅ **Health Check** - Verify server connectivity
+- ✅ **Merchant Registration** - Register test merchant
+- ✅ **CSV Feed Upload** - Test CSV product feed ingestion
+- ✅ **JSON Feed Upload** - Test JSON product feed ingestion
+- ✅ **Feed Status Monitoring** - Check processing status
+- ✅ **Product Discovery** - Verify LLM agents can find products
+- ✅ **Enhanced Search** - Test advanced product search
+- ✅ **Automatic Cleanup** - Remove temporary files
+
+**Sample Output:**
+```
+🚀 ACP Gateway Merchant Flow Test
+✅ PASS Health Check - Status: 200
+✅ PASS Merchant Registration - Merchant ID: teststore.example.com
+✅ PASS CSV Feed Upload - Processed: 3 products, Errors: 0
+✅ PASS JSON Feed Upload - Processed: 1 products, Errors: 0
+✅ PASS Product Discovery - Found: 4 products available for LLM agents
+🎯 Final Score: 10/10 tests passed
+🎉 All merchant flow tests passed!
+```
+
+### 🏗️ Architecture Design Guide
+
+The `architecture-design-guide.md` provides complete implementation guidance:
+
+#### Merchant Side Integration
+- **Registration flows** - How to onboard merchants
+- **Product feed systems** - CSV/JSON upload patterns
+- **Batch processing** - Handling large product catalogs
+- **Scheduled updates** - Automatic inventory sync
+- **Data transformation** - Converting to OpenAI Product Feed Specification
+
+#### LLM Agent Integration
+- **Product discovery** - Search and recommendation systems
+- **Shopping intents** - Cart management and checkout
+- **Natural language processing** - Converting user requests to structured actions
+- **Session management** - Tracking user shopping sessions
+
+#### Complete Code Examples
+- Full JavaScript implementations for both sides
+- Real-world integration patterns
+- Error handling and retry logic
+- Best practices and design principles
+
+### 📊 Test Coverage
+
+The examples provide comprehensive coverage of:
+
+- **Core ACP APIs** - Product listing, intent handling, checkout
+- **Merchant APIs** - Registration, feed upload, status monitoring
+- **Product Feed APIs** - CSV/JSON ingestion, validation, processing
+- **Agentic Checkout APIs** - Session management, payment processing
+- **Error Scenarios** - Network failures, validation errors, edge cases
+
 ## API Endpoints
 
 | Method | Path | Purpose |
@@ -253,6 +343,9 @@ python examples/test-fastapi.py
 
 # Test Express (port 8081)
 node examples/test-express.js
+
+# Test comprehensive merchant workflow
+node examples/test-merchant-flow.js
 
 # Test Go (port 8082)
 cd go

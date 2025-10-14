@@ -378,3 +378,4 @@ review-acp-alignment.py
 .env.development
 .env.test
 .env.production
+examples/
