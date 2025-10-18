@@ -10,7 +10,8 @@
     "test-merchant": "node test-merchant-flow.js",
     "llm-agent": "node llm-agent-server.js",
     "push-service": "node acp-gateway-push-service.js start",
-    "demo-flow": "node demo-proper-flow.js",
+    "demo-flow": "node /Users/dako22/Documents/GitHub/mountain_freedom/apis/acp-gateway/examples/demo-proper-flow.js",
+    "test-webhook": "node test-webhook.js",
     "install-deps": "npm install"
   },
   "dependencies": {
